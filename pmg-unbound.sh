@@ -4,7 +4,8 @@
 # Local recursive DNS resolver for Proxmox Mail Gateway
 # to avoid RBL rate limits
 
-set -e
+# Don't exit on errors in interactive menu mode
+# set -e removed to allow graceful error handling
 
 UNBOUND_CONF="/etc/unbound/unbound.conf"
 ROOT_HINTS="/var/lib/unbound/root.hints"
@@ -44,7 +45,7 @@ install_unbound() {
         fi
     else
         echo "Installing unbound..."
-        apt update && apt install -y unbound dnsutils || { echo -e "${RED}Installation failed${NC}"; exit 1; }
+        apt update && apt install -y unbound dnsutils || { echo -e "${RED}Installation failed${NC}"; return 1; }
     fi
 
     echo "Backing up existing config if present..."
@@ -130,7 +131,7 @@ EOF
     chown unbound:unbound /var/log/unbound
 
     echo "Validating configuration..."
-    unbound-checkconf || { echo -e "${RED}Configuration error${NC}"; exit 1; }
+    unbound-checkconf || { echo -e "${RED}Configuration error${NC}"; return 1; }
 
     echo "Enabling and starting unbound service..."
     systemctl enable unbound
@@ -141,7 +142,7 @@ EOF
     else
         echo -e "${RED}✗ Unbound failed to start${NC}"
         journalctl -u unbound -n 20 --no-pager
-        exit 1
+        return 1
     fi
 
     # Test DNS resolution
@@ -151,7 +152,7 @@ EOF
         echo -e "${GREEN}✓ DNS resolution via unbound is working${NC}"
     else
         echo -e "${RED}✗ DNS resolution failed${NC}"
-        exit 1
+        return 1
     fi
     
     # Test RBL resolution
@@ -223,23 +224,37 @@ uninstall_unbound() {
 
 # Show statistics
 show_stats() {
-    if ! systemctl is-active --quiet unbound; then
+    if ! systemctl list-unit-files | grep -q "^unbound.service"; then
+        echo -e "${RED}✗ Unbound is not installed${NC}"
+        echo "Run installation first (option 1)"
+        return
+    fi
+    
+    if ! systemctl is-active --quiet unbound 2>/dev/null; then
         echo -e "${RED}✗ Unbound is not running${NC}"
+        echo ""
+        systemctl status unbound --no-pager -l 2>/dev/null || true
         return
     fi
     
     echo -e "${GREEN}Unbound Statistics:${NC}"
     echo "══════════════════════════════════════════════════════════════"
-    unbound-control stats | grep -E "(total|cache|num\.query|num\.answer)" | head -20
+    unbound-control stats 2>/dev/null | grep -E "(total|cache|num\.query|num\.answer)" | head -20
     echo "══════════════════════════════════════════════════════════════"
     echo ""
     echo "Service status:"
-    systemctl status unbound --no-pager -l
+    systemctl status unbound --no-pager -l 2>/dev/null || true
 }
 
 # Test DNS and RBL
 test_dns() {
-    if ! systemctl is-active --quiet unbound; then
+    if ! systemctl list-unit-files | grep -q "^unbound.service"; then
+        echo -e "${RED}✗ Unbound is not installed${NC}"
+        echo "Run installation first (option 1)"
+        return
+    fi
+    
+    if ! systemctl is-active --quiet unbound 2>/dev/null; then
         echo -e "${RED}✗ Unbound is not running${NC}"
         return
     fi
@@ -261,22 +276,28 @@ test_dns() {
 
 # Enable/disable debug logging
 toggle_debug() {
+    if ! systemctl list-unit-files | grep -q "^unbound.service"; then
+        echo -e "${RED}✗ Unbound is not installed${NC}"
+        echo "Run installation first (option 1)"
+        return
+    fi
+    
     if [ "$1" == "on" ]; then
         echo "Enabling debug logging..."
-        sed -i 's/log-queries: no/log-queries: yes/' "$UNBOUND_CONF"
-        sed -i 's/log-replies: no/log-replies: yes/' "$UNBOUND_CONF"
-        systemctl reload unbound
+        sed -i 's/log-queries: no/log-queries: yes/' "$UNBOUND_CONF" 2>/dev/null
+        sed -i 's/log-replies: no/log-replies: yes/' "$UNBOUND_CONF" 2>/dev/null
+        systemctl reload unbound 2>/dev/null
         echo -e "${GREEN}✓ Debug logging enabled${NC}"
         echo "View logs: tail -f /var/log/unbound/unbound.log"
     elif [ "$1" == "off" ]; then
         echo "Disabling debug logging..."
-        sed -i 's/log-queries: yes/log-queries: no/' "$UNBOUND_CONF"
-        sed -i 's/log-replies: yes/log-replies: no/' "$UNBOUND_CONF"
-        systemctl reload unbound
+        sed -i 's/log-queries: yes/log-queries: no/' "$UNBOUND_CONF" 2>/dev/null
+        sed -i 's/log-replies: yes/log-replies: no/' "$UNBOUND_CONF" 2>/dev/null
+        systemctl reload unbound 2>/dev/null
         echo -e "${GREEN}✓ Debug logging disabled${NC}"
     else
         echo "Current debug status:"
-        if grep -q "log-queries: yes" "$UNBOUND_CONF"; then
+        if [ -f "$UNBOUND_CONF" ] && grep -q "log-queries: yes" "$UNBOUND_CONF"; then
             echo -e "${GREEN}Debug logging: ON${NC}"
         else
             echo -e "${YELLOW}Debug logging: OFF${NC}"
@@ -286,11 +307,17 @@ toggle_debug() {
 
 # Update root hints
 update_hints() {
+    if ! systemctl list-unit-files | grep -q "^unbound.service"; then
+        echo -e "${RED}✗ Unbound is not installed${NC}"
+        echo "Run installation first (option 1)"
+        return
+    fi
+    
     echo "Updating root hints..."
     wget -q -O "$ROOT_HINTS.tmp" https://www.internic.net/domain/named.root
     if [ $? -eq 0 ]; then
         mv "$ROOT_HINTS.tmp" "$ROOT_HINTS"
-        systemctl reload unbound
+        systemctl reload unbound 2>/dev/null
         echo -e "${GREEN}✓ Root hints updated successfully${NC}"
     else
         echo -e "${RED}✗ Failed to download root hints${NC}"
@@ -349,7 +376,12 @@ main_menu() {
                 read -p "Press Enter to continue..."
                 ;;
             3)
-                systemctl status unbound --no-pager
+                if systemctl list-unit-files | grep -q "^unbound.service"; then
+                    systemctl status unbound --no-pager 2>/dev/null || true
+                else
+                    echo -e "${RED}✗ Unbound is not installed${NC}"
+                    echo "Run installation first (option 1)"
+                fi
                 read -p "Press Enter to continue..."
                 ;;
             4)
@@ -410,7 +442,12 @@ else
             update_hints
             ;;
         status)
-            systemctl status unbound --no-pager
+            if systemctl list-unit-files | grep -q "^unbound.service"; then
+                systemctl status unbound --no-pager 2>/dev/null || true
+            else
+                echo -e "${RED}✗ Unbound is not installed${NC}"
+                exit 1
+            fi
             ;;
         menu)
             main_menu

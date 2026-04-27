@@ -132,6 +132,9 @@ EOF
     mkdir -p /var/log/unbound
     chown unbound:unbound /var/log/unbound
 
+    echo "Setting up remote control keys..."
+    unbound-control-setup >/dev/null 2>&1 || { echo -e "${YELLOW}Warning: Could not setup remote control keys${NC}"; }
+
     echo "Validating configuration..."
     unbound-checkconf || { echo -e "${RED}Configuration error${NC}"; return 1; }
 

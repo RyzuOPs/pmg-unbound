@@ -312,47 +312,126 @@ EOF
     echo -e "${GREEN}✓ Monthly cron job created${NC}"
 }
 
-# Show usage
-usage() {
-    echo "PMG Unbound"
+# Show menu
+show_menu() {
+    clear
+    echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}                    PMG Unbound - Main Menu                      ${NC}"
+    echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
     echo ""
-    echo "Usage: $0 [command]"
+    echo "  1) Install unbound"
+    echo "  2) Uninstall unbound"
+    echo "  3) Show status"
+    echo "  4) Show statistics"
+    echo "  5) Test DNS and RBL"
+    echo "  6) Enable debug logging"
+    echo "  7) Disable debug logging"
+    echo "  8) Update root hints"
+    echo "  9) Exit"
     echo ""
-    echo "Commands:"
-    echo "  install       - Install and configure unbound"
-    echo "  uninstall     - Remove unbound"
-    echo "  stats         - Show statistics"
-    echo "  test          - Test DNS and RBL resolution"
-    echo "  debug on/off  - Enable/disable query logging"
-    echo "  update-hints  - Update root DNS hints"
-    echo "  status        - Check unbound status"
-    echo ""
+    echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
 }
 
-# Main
-case "$1" in
-    install)
-        install_unbound
-        ;;
-    uninstall)
-        uninstall_unbound
-        ;;
-    stats)
-        show_stats
-        ;;
-    test)
-        test_dns
-        ;;
-    debug)
-        toggle_debug "$2"
-        ;;
-    update-hints)
-        update_hints
-        ;;
-    status)
-        systemctl status unbound --no-pager
-        ;;
-    *)
-        usage
-        ;;
-esac
+# Main menu loop
+main_menu() {
+    while true; do
+        show_menu
+        read -p "Select option [1-9]: " choice
+        echo ""
+        
+        case $choice in
+            1)
+                install_unbound
+                read -p "Press Enter to continue..."
+                ;;
+            2)
+                uninstall_unbound
+                read -p "Press Enter to continue..."
+                ;;
+            3)
+                systemctl status unbound --no-pager
+                read -p "Press Enter to continue..."
+                ;;
+            4)
+                show_stats
+                read -p "Press Enter to continue..."
+                ;;
+            5)
+                test_dns
+                read -p "Press Enter to continue..."
+                ;;
+            6)
+                toggle_debug "on"
+                read -p "Press Enter to continue..."
+                ;;
+            7)
+                toggle_debug "off"
+                read -p "Press Enter to continue..."
+                ;;
+            8)
+                update_hints
+                read -p "Press Enter to continue..."
+                ;;
+            9)
+                echo "Exiting..."
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}Invalid option. Please select 1-9.${NC}"
+                read -p "Press Enter to continue..."
+                ;;
+        esac
+    done
+}
+
+# Main - support both CLI parameters and interactive menu
+if [ $# -eq 0 ]; then
+    # No parameters - show interactive menu
+    main_menu
+else
+    # Parameters provided - use CLI mode
+    case "$1" in
+        install)
+            install_unbound
+            ;;
+        uninstall)
+            uninstall_unbound
+            ;;
+        stats)
+            show_stats
+            ;;
+        test)
+            test_dns
+            ;;
+        debug)
+            toggle_debug "$2"
+            ;;
+        update-hints)
+            update_hints
+            ;;
+        status)
+            systemctl status unbound --no-pager
+            ;;
+        menu)
+            main_menu
+            ;;
+        *)
+            echo "PMG Unbound"
+            echo ""
+            echo "Usage: $0 [command]"
+            echo ""
+            echo "Commands:"
+            echo "  install       - Install and configure unbound"
+            echo "  uninstall     - Remove unbound"
+            echo "  stats         - Show statistics"
+            echo "  test          - Test DNS and RBL resolution"
+            echo "  debug on/off  - Enable/disable query logging"
+            echo "  update-hints  - Update root DNS hints"
+            echo "  status        - Check unbound status"
+            echo "  menu          - Show interactive menu"
+            echo ""
+            echo "Run without parameters to use interactive menu"
+            echo ""
+            ;;
+    esac
+fi

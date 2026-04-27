@@ -47,7 +47,38 @@ During installation, you'll be asked whether to add a monthly cron job for root 
 
 ## 🚀 Usage
 
-### Basic commands
+### Interactive Menu (Recommended)
+
+Simply run the script without parameters to access the interactive menu:
+
+```bash
+./pmg-unbound.sh
+```
+
+You'll see a menu like this:
+```
+════════════════════════════════════════════════════════════════
+                    PMG Unbound - Main Menu
+════════════════════════════════════════════════════════════════
+
+  1) Install unbound
+  2) Uninstall unbound
+  3) Show status
+  4) Show statistics
+  5) Test DNS and RBL
+  6) Enable debug logging
+  7) Disable debug logging
+  8) Update root hints
+  9) Exit
+
+════════════════════════════════════════════════════════════════
+Select option [1-9]:
+```
+
+### Command Line Mode (Optional)
+
+You can also use command line parameters for scripting or automation:
+
 ```bash
 # Installation
 ./pmg-unbound.sh install
@@ -63,38 +94,69 @@ During installation, you'll be asked whether to add a monthly cron job for root 
 
 # Uninstall
 ./pmg-unbound.sh uninstall
-```
 
-### Advanced
-```bash
-# Enable query logging (debug)
+# Enable/disable debug logging
 ./pmg-unbound.sh debug on
-
-# Disable query logging
 ./pmg-unbound.sh debug off
 
-# Update root DNS hints manually
+# Update root DNS hints
 ./pmg-unbound.sh update-hints
+
+# Show interactive menu
+./pmg-unbound.sh menu
 ```
 
 ## 📋 Typical Workflow
 
 ### After first installation:
 ```bash
-# 1. Install and configure
+# 1. Run the script
+./pmg-unbound.sh
+
+# 2. Select option 1 (Install unbound)
+# Answer 'Y' to cron question
+
+# 3. Select option 5 (Test DNS and RBL)
+# Verify everything works
+
+# 4. Select option 3 (Show status)
+# Check that unbound is running
+
+# 5. Change DNS in PMG GUI to 127.0.0.1 (System → Network Configuration)
+
+# 6. Select option 9 (Exit)
+```
+
+### Using CLI Mode:
+```bash
+# Quick installation with CLI parameters
 ./pmg-unbound.sh install
 # Answer 'Y' to cron question
 
-# 2. Test functionality
+# Test functionality
 ./pmg-unbound.sh test
 
-# 3. Check status
+# Check status
 ./pmg-unbound.sh status
 
 # 4. Change DNS in PMG GUI to 127.0.0.1 (System → Network Configuration)
 ```
 
 ### Daily usage:
+
+**Using Interactive Menu:**
+```bash
+# Run the script
+./pmg-unbound.sh
+
+# Select option 3 (Show status) - Check if everything is working
+# Select option 4 (Show statistics) - View cache efficiency
+# Select option 6 (Enable debug) - If you have problems
+# Then view logs: tail -f /var/log/unbound/unbound.log
+# Select option 7 (Disable debug) - After diagnosis
+```
+
+**Using CLI Mode:**
 ```bash
 # Check if everything is working
 ./pmg-unbound.sh status
@@ -110,6 +172,21 @@ tail -f /var/log/unbound/unbound.log
 ```
 
 ### Troubleshooting:
+
+**Using Interactive Menu:**
+```bash
+# Run the script
+./pmg-unbound.sh
+
+# 1. Select option 3 (Show status)
+# 2. Select option 5 (Test DNS and RBL)
+# 3. Select option 6 (Enable debug logging)
+# 4. View logs: tail -f /var/log/unbound/unbound.log
+# 5. Check system logs: journalctl -u unbound -n 50
+# 6. Select option 7 (Disable debug logging)
+```
+
+**Using CLI Mode:**
 ```bash
 # 1. Check service status
 ./pmg-unbound.sh status
@@ -131,6 +208,15 @@ journalctl -u unbound -n 50
 ```
 
 ### Maintenance:
+
+**Using Interactive Menu:**
+```bash
+./pmg-unbound.sh
+# Select option 8 (Update root hints) - Monthly update
+# Select option 4 (Show statistics) - Check cache efficiency
+```
+
+**Using CLI Mode:**
 ```bash
 # Monthly root hints update (or automatically via cron)
 ./pmg-unbound.sh update-hints

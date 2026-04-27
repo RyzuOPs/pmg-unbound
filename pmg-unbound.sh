@@ -36,23 +36,27 @@ install_unbound() {
     check_pmg
     
     echo "Checking if unbound is installed..."
-    if dpkg -s unbound >/dev/null 2>&1; then
+    if command -v unbound-checkconf >/dev/null 2>&1 && dpkg -s unbound >/dev/null 2>&1; then
         echo -e "${YELLOW}Unbound is already installed${NC}"
         read -p "Reinstall and reconfigure? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             return
         fi
+        echo "Reinstalling and reconfiguring unbound..."
     else
         echo "Installing unbound..."
-        apt update && apt install -y unbound dnsutils || { echo -e "${RED}Installation failed${NC}"; return 1; }
-    fi
-
-    echo "Backing up existing config if present..."
-    if [ -f "$UNBOUND_CONF" ]; then
-        mv "$UNBOUND_CONF" "${UNBOUND_CONF}.bak.$(date +%s)"
     fi
     
+    # Clean up old config files if reinstalling
+    if [ -f "$UNBOUND_CONF" ]; then
+        echo "Backing up existing config..."
+        mv "$UNBOUND_CONF" "${UNBOUND_CONF}.bak.$(date +%s)" 2>/dev/null || true
+    fi
+    
+    # Always install/reinstall package
+    apt update && apt install -y --reinstall unbound dnsutils || { echo -e "${RED}Installation failed${NC}"; return 1; }
+
     echo "Downloading root hints..."
     mkdir -p /var/lib/unbound
     wget -q -O "$ROOT_HINTS" https://www.internic.net/domain/named.root || {
@@ -201,21 +205,23 @@ uninstall_unbound() {
     fi
     
     echo "Stopping unbound..."
-    systemctl stop unbound || true
-    systemctl disable unbound || true
+    systemctl stop unbound 2>/dev/null || true
+    systemctl disable unbound 2>/dev/null || true
     
-    echo "Removing package..."
-    apt remove -y unbound
+    echo "Removing package and configuration..."
+    apt purge -y unbound 2>/dev/null || apt remove -y unbound 2>/dev/null || true
     
-    echo "Removing configuration files..."
-    rm -f "$UNBOUND_CONF" "${UNBOUND_CONF}.bak"*
-    rm -f "$ROOT_HINTS"
-    rm -rf /var/log/unbound
+    echo "Removing configuration files and directories..."
+    rm -f "$UNBOUND_CONF" "${UNBOUND_CONF}.bak"* 2>/dev/null || true
+    rm -f "$ROOT_HINTS" 2>/dev/null || true
+    rm -rf /var/log/unbound 2>/dev/null || true
+    rm -rf /etc/unbound 2>/dev/null || true
+    rm -rf /var/lib/unbound 2>/dev/null || true
     
     echo "Removing cron job..."
-    rm -f "$CRON_FILE"
+    rm -f "$CRON_FILE" 2>/dev/null || true
     
-    echo -e "${GREEN}✓ Unbound has been uninstalled${NC}"
+    echo -e "${GREEN}✓ Unbound has been completely uninstalled${NC}"
     echo ""
     echo -e "${YELLOW}Remember to restore DNS settings in PMG GUI!${NC}"
 }

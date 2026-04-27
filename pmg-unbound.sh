@@ -85,20 +85,18 @@ server:
     root-hints: "$ROOT_HINTS"
     
     # Performance and caching for RBL queries
-    # Short cache for positive answers (IP is on blacklist) - allows quick updates
+    # Cache TTL - respects TTL from RBL servers (usually 5-15 min)
+    # This allows IPs to be quickly removed from blacklists
     cache-min-ttl: 300
     cache-max-ttl: 86400
-    
-    # Long cache for negative answers (IP not on blacklist) - saves rate limits
-    # Most IPs are clean, so this reduces 90%+ of RBL queries
-    cache-min-negative-ttl: 3600
     
     # Optimizations for high-traffic PMG environment
     prefetch: yes
     prefetch-key: yes
     msg-cache-size: 50m
     rrset-cache-size: 100m
-    neg-cache-size: 4m
+    # Large negative cache - most IPs are clean, this saves 90%+ of RBL queries
+    neg-cache-size: 10m
     num-threads: 2
     so-reuseport: yes
     outgoing-range: 8192

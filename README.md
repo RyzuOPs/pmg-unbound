@@ -235,14 +235,14 @@ systemctl restart unbound
 The script automatically configures:
 
 **TTL Cache:**
-- `cache-min-ttl: 300` (5 min) - positive answers (IP is on blacklist)
-- `cache-min-negative-ttl: 3600` (60 min) - negative answers (clean IPs)
+- `cache-min-ttl: 300` (5 min) - respects TTL from RBL servers (usually 5-15 min)
 - `cache-max-ttl: 86400` (24h) - maximum TTL
+- Allows IPs to be quickly removed from blacklists when their status changes
 
 **Performance:**
 - `msg-cache-size: 50m` - message cache
 - `rrset-cache-size: 100m` - record cache
-- `neg-cache-size: 4m` - negative answer cache
+- `neg-cache-size: 10m` - large negative answer cache (most IPs are clean, saves 90%+ of RBL queries)
 - `num-threads: 2` - multi-threading
 - `so-reuseport: yes` - better query distribution
 - `outgoing-range: 8192` - more ports for outgoing queries

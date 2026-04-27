@@ -1,214 +1,214 @@
 # PMG Unbound
 
-**Menadżer lokalnego rekurencyjnego DNS resolvera dla Proxmox Mail Gateway**
+**Local recursive DNS resolver for Proxmox Mail Gateway**
 
-Skrypt instaluje i zarządza serwerem DNS Unbound na PMG, aby uniknąć limitów zapytań podczas sprawdzania adresów IP na listach RBL (Realtime Blackhole Lists).
+Script to install and manage Unbound DNS server on PMG to avoid query rate limits when checking IP addresses against RBL (Realtime Blackhole Lists).
 
 ## 🎯 Problem
 
-Proxmox Mail Gateway sprawdza każdy przychodzący email na wielu listach RBL (np. Spamhaus, SORBS, SpamCop). Bezpośrednie zapytania do publicznych serwerów DNS szybko wyczerpują limity rate-limit, co powoduje:
-- Opóźnienia w przetwarzaniu poczty
-- Błędy DNS timeout
-- Potencjalne blokady IP serwera
+Proxmox Mail Gateway checks every incoming email against multiple RBL lists (e.g., Spamhaus, SORBS, SpamCop). Direct queries to public DNS servers quickly exhaust rate limits, causing:
+- Mail processing delays
+- DNS timeout errors
+- Potential server IP blocks
 
-## ✅ Rozwiązanie
+## ✅ Solution
 
-Unbound jako lokalny rekurencyjny resolver:
-- **Bezpośrednie zapytania** do autoritatywnych serwerów DNS (bez pośredników)
-- **Brak limitów** zapytań RBL
-- **Inteligentny cache** - optymalizowany dla RBL
-- **Wysoka wydajność** - szybsze odpowiedzi DNS
+Unbound as a local recursive resolver:
+- **Direct queries** to authoritative DNS servers (no intermediaries)
+- **No rate limits** on RBL queries
+- **Smart caching** - optimized for RBL
+- **High performance** - faster DNS responses
 
-## 📦 Instalacja
+## 📦 Installation
 
-### 1. Pobierz skrypt
+### 1. Download the script
 ```bash
 wget https://raw.githubusercontent.com/RyzuOPs/pmg-unbound/main/pmg-unbound.sh
 chmod +x pmg-unbound.sh
 ```
 
-### 2. Zainstaluj Unbound
+### 2. Install Unbound
 ```bash
 ./pmg-unbound.sh install
 ```
 
-Podczas instalacji zostaniesz zapytany czy dodać miesięczny cron do aktualizacji root hints (zalecane: TAK).
+During installation, you'll be asked whether to add a monthly cron job for root hints updates (recommended: YES).
 
-### 3. Skonfiguruj DNS w PMG
+### 3. Configure DNS in PMG
 
-⚠️ **WAŻNE:** Po instalacji musisz ręcznie zmienić DNS w GUI:
+⚠️ **IMPORTANT:** After installation, you must manually change DNS in the GUI:
 
-1. Zaloguj się do interfejsu webowego PMG
-2. Przejdź do: **System → Network Configuration**
-3. Wybierz interfejs sieciowy (np. vmbr0)
-4. Kliknij **Edit**
-5. Zmień **DNS Server 1** na: `127.0.0.1`
-6. Kliknij **OK** i **Apply Configuration**
+1. Log in to PMG web interface
+2. Go to: **System → Network Configuration**
+3. Select your network interface (e.g., vmbr0)
+4. Click **Edit**
+5. Change **DNS Server 1** to: `127.0.0.1`
+6. Click **OK** and **Apply Configuration**
 
-## 🚀 Użycie
+## 🚀 Usage
 
-### Podstawowe komendy
+### Basic commands
 ```bash
-# Instalacja
+# Installation
 ./pmg-unbound.sh install
 
-# Status serwisu
+# Service status
 ./pmg-unbound.sh status
 
-# Statystyki (cache hits, zapytania)
+# Statistics (cache hits, queries)
 ./pmg-unbound.sh stats
 
-# Test DNS i RBL
+# Test DNS and RBL
 ./pmg-unbound.sh test
 
-# Deinstalacja
+# Uninstall
 ./pmg-unbound.sh uninstall
 ```
 
-### Zaawansowane
+### Advanced
 ```bash
-# Włącz logowanie zapytań (debug)
+# Enable query logging (debug)
 ./pmg-unbound.sh debug on
 
-# Wyłącz logowanie zapytań
+# Disable query logging
 ./pmg-unbound.sh debug off
 
-# Aktualizuj root DNS hints ręcznie
+# Update root DNS hints manually
 ./pmg-unbound.sh update-hints
 ```
 
-## 📋 Typowy workflow
+## 📋 Typical Workflow
 
-### Po pierwszej instalacji:
+### After first installation:
 ```bash
-# 1. Zainstaluj i skonfiguruj
+# 1. Install and configure
 ./pmg-unbound.sh install
-# Odpowiedz 'Y' na pytanie o cron
+# Answer 'Y' to cron question
 
-# 2. Przetestuj działanie
+# 2. Test functionality
 ./pmg-unbound.sh test
 
-# 3. Sprawdź status
+# 3. Check status
 ./pmg-unbound.sh status
 
-# 4. Zmień DNS w PMG GUI na 127.0.0.1 (System → Network Configuration)
+# 4. Change DNS in PMG GUI to 127.0.0.1 (System → Network Configuration)
 ```
 
-### Codzienne użycie:
+### Daily usage:
 ```bash
-# Sprawdź czy wszystko działa
+# Check if everything is working
 ./pmg-unbound.sh status
 
-# Zobacz statystyki cache (jak dużo oszczędzasz zapytań)
+# View cache statistics (how many queries you're saving)
 ./pmg-unbound.sh stats
 
-# Jeśli masz problemy, włącz debug
+# If you have problems, enable debug
 ./pmg-unbound.sh debug on
 tail -f /var/log/unbound/unbound.log
-# ... diagnoza ...
+# ... diagnosis ...
 ./pmg-unbound.sh debug off
 ```
 
-### Debugowanie problemów:
+### Troubleshooting:
 ```bash
-# 1. Sprawdź status serwisu
+# 1. Check service status
 ./pmg-unbound.sh status
 
-# 2. Testuj rezolwowanie DNS
+# 2. Test DNS resolution
 ./pmg-unbound.sh test
 
-# 3. Włącz szczegółowe logi
+# 3. Enable detailed logs
 ./pmg-unbound.sh debug on
 
-# 4. Zobacz logi w czasie rzeczywistym
+# 4. View logs in real-time
 tail -f /var/log/unbound/unbound.log
 
-# 5. Sprawdź logi systemowe
+# 5. Check system logs
 journalctl -u unbound -n 50
 
-# 6. Po naprawie wyłącz debug
+# 6. After fixing, disable debug
 ./pmg-unbound.sh debug off
 ```
 
-### Konserwacja:
+### Maintenance:
 ```bash
-# Miesięczna aktualizacja root hints (lub automatycznie przez cron)
+# Monthly root hints update (or automatically via cron)
 ./pmg-unbound.sh update-hints
 
-# Sprawdzenie efektywności cache
+# Check cache efficiency
 ./pmg-unbound.sh stats | grep cache
 
-# Restart serwisu (jeśli potrzebny)
+# Restart service (if needed)
 systemctl restart unbound
 ```
 
-## ⚙️ Konfiguracja
+## ⚙️ Configuration
 
-### Optymalizacje dla RBL
+### RBL Optimizations
 
-Skrypt automatycznie konfiguruje:
+The script automatically configures:
 
 **TTL Cache:**
-- `cache-min-ttl: 300` (5 min) - odpowiedzi pozytywne (IP na blackliście)
-- `cache-min-negative-ttl: 3600` (60 min) - odpowiedzi negatywne (IP czyste)
-- `cache-max-ttl: 86400` (24h) - maksymalny TTL
+- `cache-min-ttl: 300` (5 min) - positive answers (IP is on blacklist)
+- `cache-min-negative-ttl: 3600` (60 min) - negative answers (clean IPs)
+- `cache-max-ttl: 86400` (24h) - maximum TTL
 
-**Wydajność:**
-- `msg-cache-size: 50m` - cache wiadomości
-- `rrset-cache-size: 100m` - cache rekordów
-- `neg-cache-size: 4m` - cache negatywnych odpowiedzi
-- `num-threads: 2` - wielowątkowość
-- `so-reuseport: yes` - lepsza dystrybucja zapytań
-- `outgoing-range: 8192` - więcej portów dla zapytań wychodzących
-- `infra-cache-numhosts: 10000` - większy cache infrastruktury
+**Performance:**
+- `msg-cache-size: 50m` - message cache
+- `rrset-cache-size: 100m` - record cache
+- `neg-cache-size: 4m` - negative answer cache
+- `num-threads: 2` - multi-threading
+- `so-reuseport: yes` - better query distribution
+- `outgoing-range: 8192` - more ports for outgoing queries
+- `infra-cache-numhosts: 10000` - larger infrastructure cache
 
-**Bezpieczeństwo:**
+**Security:**
 - `hide-identity: yes`
 - `hide-version: yes`
 - `harden-glue: yes`
 - `harden-dnssec-stripped: yes`
 
-### Logowanie
+### Logging
 
-Domyślnie logowane są tylko błędy (`/var/log/unbound/unbound.log`).
+By default, only errors are logged (`/var/log/unbound/unbound.log`).
 
-Włącz pełne logowanie zapytań dla debugowania:
+Enable full query logging for debugging:
 ```bash
 ./pmg-unbound.sh debug on
 tail -f /var/log/unbound/unbound.log
 ```
 
-## 📊 Statystyki
+## 📊 Statistics
 
-Sprawdź efektywność cache:
+Check cache efficiency:
 
 ```bash
 ./pmg-unbound.sh stats
 ```
 
-Przykładowy wynik:
+Example output:
 ```
 total.num.queries=123456
 total.cache.hits=98765
 total.recursion.time.avg=0.123456
 ```
 
-Cache hit ratio > 80% = świetna optymalizacja! 🎉
+Cache hit ratio > 80% = excellent optimization! 🎉
 
-## 🔧 Utrzymanie
+## 🔧 Maintenance
 
-### Automatyczna aktualizacja root hints
+### Automatic root hints updates
 
-Jeśli podczas instalacji włączyłeś cron, root hints będą aktualizowane automatycznie co miesiąc.
+If you enabled cron during installation, root hints will be updated automatically every month.
 
-Ręczna aktualizacja:
+Manual update:
 ```bash
 ./pmg-unbound.sh update-hints
 ```
 
 ### Monitoring
 
-Sprawdź czy Unbound działa poprawnie:
+Check if Unbound is working correctly:
 ```bash
 systemctl status unbound
 ./pmg-unbound.sh test
@@ -216,59 +216,59 @@ systemctl status unbound
 
 ## 🐛 Troubleshooting
 
-### Unbound nie startuje
+### Unbound won't start
 ```bash
-# Sprawdź logi
+# Check logs
 journalctl -u unbound -n 50
 
-# Waliduj konfigurację
+# Validate configuration
 unbound-checkconf
 ```
 
-### DNS nie działa po zmianie w GUI
+### DNS doesn't work after GUI change
 ```bash
-# Sprawdź czy DNS wskazuje na localhost
+# Check if DNS points to localhost
 cat /etc/resolv.conf
 
-# Zrestartuj unbound i PMG
+# Restart unbound and PMG
 systemctl restart unbound
 systemctl restart pmgproxy pmgdaemon
 ```
 
-### Niski cache hit ratio
+### Low cache hit ratio
 ```bash
-# Włącz debug i obserwuj zapytania
+# Enable debug and watch queries
 ./pmg-unbound.sh debug on
 tail -f /var/log/unbound/unbound.log
 
-# Sprawdź czy PMG używa 127.0.0.1
+# Check if PMG is using 127.0.0.1
 dig google.com @127.0.0.1
 ```
 
-## 📋 Wymagania
+## 📋 Requirements
 
-- **System:** Proxmox Mail Gateway (bazujący na Debianie)
-- **Uprawnienia:** root
-- **Pakiety:** apt, wget, systemd (standardowo dostępne w PMG)
+- **System:** Proxmox Mail Gateway (Debian-based)
+- **Permissions:** root
+- **Packages:** apt, wget, systemd (standard in PMG)
 
-## 🔒 Bezpieczeństwo
+## 🔒 Security
 
-- Unbound nasłuchuje **tylko** na `127.0.0.1` (localhost)
-- Brak dostępu z zewnątrz
-- Rekurencyjne rozwiązywanie nazw bezpośrednio do autoritatywnych serwerów
+- Unbound listens **only** on `127.0.0.1` (localhost)
+- No external access
+- Recursive name resolution directly to authoritative servers
 
-## 📝 Licencja
+## 📝 License
 
-MIT License - użyj, modyfikuj, udostępniaj swobodnie.
+MIT License - use, modify, and share freely.
 
-## 🤝 Wsparcie
+## 🤝 Support
 
-Problemy? Sugestie? Otwórz Issue na GitHubie!
+Problems? Suggestions? Open an Issue on GitHub!
 
-## 🌟 Autor
+## 🌟 Author
 
-Skrypt stworzony dla optymalizacji Proxmox Mail Gateway.
+Script created for Proxmox Mail Gateway optimization.
 
 ---
 
-**Podobał się projekt? Daj gwiazdkę ⭐ na GitHubie!**
+**Like the project? Give it a star ⭐ on GitHub!**

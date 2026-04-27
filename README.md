@@ -23,7 +23,7 @@ Unbound jako lokalny rekurencyjny resolver:
 
 ### 1. Pobierz skrypt
 ```bash
-wget https://raw.githubusercontent.com/YOUR_USERNAME/pmg-unbound/main/pmg-unbound.sh
+wget https://raw.githubusercontent.com/RyzuOPs/pmg-unbound/main/pmg-unbound.sh
 chmod +x pmg-unbound.sh
 ```
 
@@ -75,6 +75,71 @@ Podczas instalacji zostaniesz zapytany czy dodać miesięczny cron do aktualizac
 
 # Aktualizuj root DNS hints ręcznie
 ./pmg-unbound.sh update-hints
+```
+
+## 📋 Typowy workflow
+
+### Po pierwszej instalacji:
+```bash
+# 1. Zainstaluj i skonfiguruj
+./pmg-unbound.sh install
+# Odpowiedz 'Y' na pytanie o cron
+
+# 2. Przetestuj działanie
+./pmg-unbound.sh test
+
+# 3. Sprawdź status
+./pmg-unbound.sh status
+
+# 4. Zmień DNS w PMG GUI na 127.0.0.1 (System → Network Configuration)
+```
+
+### Codzienne użycie:
+```bash
+# Sprawdź czy wszystko działa
+./pmg-unbound.sh status
+
+# Zobacz statystyki cache (jak dużo oszczędzasz zapytań)
+./pmg-unbound.sh stats
+
+# Jeśli masz problemy, włącz debug
+./pmg-unbound.sh debug on
+tail -f /var/log/unbound/unbound.log
+# ... diagnoza ...
+./pmg-unbound.sh debug off
+```
+
+### Debugowanie problemów:
+```bash
+# 1. Sprawdź status serwisu
+./pmg-unbound.sh status
+
+# 2. Testuj rezolwowanie DNS
+./pmg-unbound.sh test
+
+# 3. Włącz szczegółowe logi
+./pmg-unbound.sh debug on
+
+# 4. Zobacz logi w czasie rzeczywistym
+tail -f /var/log/unbound/unbound.log
+
+# 5. Sprawdź logi systemowe
+journalctl -u unbound -n 50
+
+# 6. Po naprawie wyłącz debug
+./pmg-unbound.sh debug off
+```
+
+### Konserwacja:
+```bash
+# Miesięczna aktualizacja root hints (lub automatycznie przez cron)
+./pmg-unbound.sh update-hints
+
+# Sprawdzenie efektywności cache
+./pmg-unbound.sh stats | grep cache
+
+# Restart serwisu (jeśli potrzebny)
+systemctl restart unbound
 ```
 
 ## ⚙️ Konfiguracja
